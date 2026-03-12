@@ -40,6 +40,9 @@ app.use('/export', exportRoutes);
 const notificationRoutes = require('./routes/notifications');
 app.use('/notifications', notificationRoutes);
 
+const referenceRoutes = require('./routes/references');
+app.use('/references', referenceRoutes);
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });
 });

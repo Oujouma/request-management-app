@@ -11,12 +11,14 @@ function CorrespondentDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all');
   const [searchClient, setSearchClient] = useState('');
+  const [references, setReferences] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [form, setForm] = useState({
     client_name: '',
     reference: '',
     article_code: '',
     quantity: '',
-    date: '',
+    date: new Date().toISOString().split('T')[0],
     notes: ''
   });
   const [message, setMessage] = useState('');
@@ -73,6 +75,30 @@ function CorrespondentDashboard() {
     }
   };
 
+  const searchReferences = async (query) => {
+    if (query.length < 1) {
+      setShowSuggestions(false);
+      return;
+    }
+    try {
+      const res = await API.get(`/references/search?query=${query}`);
+      setReferences(res.data.references);
+      setShowSuggestions(true);
+    } catch (err) {
+      console.log('Error searching references');
+    }
+  };
+
+  const selectReference = (ref) => {
+    setForm({
+      ...form,
+      client_name: ref.client_name,
+      reference: ref.reference,
+      article_code: ref.article_code
+    });
+    setShowSuggestions(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -85,7 +111,7 @@ function CorrespondentDashboard() {
       await API.post('/requests', { ...form, quantity: parseInt(form.quantity) });
       setMessage('Request created successfully!');
       setMessageType('success');
-      setForm({ client_name: '', reference: '', article_code: '', quantity: '', date: '', notes: '' });
+      setForm({ client_name: '', reference: '', article_code: '', quantity: '', date: new Date().toISOString().split('T')[0], notes: '' });
       loadRequests();
     } catch (err) {
       setMessage(err.response?.data?.error || 'Error creating request');
@@ -99,14 +125,12 @@ function CorrespondentDashboard() {
     window.location.href = '/';
   };
 
-  // Apply filters
   const filteredRequests = requests.filter((r) => {
     if (filter !== 'all' && r.status !== filter) return false;
     if (searchClient && !r.client_name.toLowerCase().includes(searchClient.toLowerCase())) return false;
     return true;
   });
 
-  // Analytics
   const totalRequests = requests.length;
   const pendingCount = requests.filter((r) => r.status === 'pending').length;
   const processingCount = requests.filter((r) => r.status === 'processing').length;
@@ -146,7 +170,6 @@ function CorrespondentDashboard() {
         </div>
       </div>
 
-      {/* Analytics Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '25px' }}>
         <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
           <p style={{ fontSize: '14px', color: '#777' }}>Total Sent</p>
@@ -172,15 +195,49 @@ function CorrespondentDashboard() {
         <div className="form-grid">
           <div>
             <label>Client Name</label>
-            <input type="text" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+            <input
+              type="text"
+              value={form.client_name}
+              onChange={(e) => {
+                setForm({ ...form, client_name: e.target.value });
+                searchReferences(e.target.value);
+              }}
+              placeholder="Type client name..."
+            />
+            {showSuggestions && references.length > 0 && (
+              <div style={{
+                position: 'absolute', width: '45%', background: 'white', border: '1px solid #ddd',
+                borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, maxHeight: '200px', overflow: 'auto'
+              }}>
+                {references.map((ref) => (
+                  <div
+                    key={ref.id}
+                    onClick={() => selectReference(ref)}
+                    style={{ padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}
+                    onMouseEnter={(e) => e.target.style.background = '#f0f7ff'}
+                    onMouseLeave={(e) => e.target.style.background = 'white'}
+                  >
+                    <strong>{ref.client_name}</strong> — {ref.reference} — {ref.article_code}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label>Reference</label>
-            <input type="text" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
+            <input
+              type="text"
+              value={form.reference}
+              onChange={(e) => {
+                setForm({ ...form, reference: e.target.value });
+                searchReferences(e.target.value);
+              }}
+              placeholder="Type to search..."
+            />
           </div>
           <div>
             <label>Article Code</label>
-            <input type="text" value={form.article_code} onChange={(e) => setForm({ ...form, article_code: e.target.value })} />
+            <input type="text" value={form.article_code} onChange={(e) => setForm({ ...form, article_code: e.target.value })} readOnly style={{ backgroundColor: '#f5f5f5' }} />
           </div>
           <div>
             <label>Quantity</label>

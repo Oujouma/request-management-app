@@ -37,6 +37,23 @@ function ExpeditorDashboard() {
     window.location.href = '/';
   };
 
+  const exportToExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3000/export/excel', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'requests.xlsx';
+      a.click();
+    } catch (err) {
+      console.log('Export failed');
+    }
+  };
+
   const filteredRequests = filter === 'all'
     ? requests
     : requests.filter((r) => r.status === filter);
@@ -45,7 +62,10 @@ function ExpeditorDashboard() {
     <div className="dashboard">
       <div className="dashboard-header">
         <h2>Expeditor Dashboard</h2>
-        <button className="btn-logout" onClick={handleLogout}>Logout</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn-submit" onClick={exportToExcel}>Export Excel</button>
+          <button className="btn-logout" onClick={handleLogout}>Logout</button>
+        </div>
       </div>
 
       <div className="table-section">

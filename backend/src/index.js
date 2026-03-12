@@ -43,6 +43,9 @@ app.use('/notifications', notificationRoutes);
 const referenceRoutes = require('./routes/references');
 app.use('/references', referenceRoutes);
 
+const analyticsRoutes = require('./routes/analytics');
+app.use('/analytics', analyticsRoutes);
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });
 });

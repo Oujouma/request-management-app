@@ -10,11 +10,15 @@ function ExpeditorDashboard() {
   const [searchClient, setSearchClient] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [popularRefs, setPopularRefs] = useState([]);
+  const [topClients, setTopClients] = useState([]);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
     loadRequests();
-    socket.on('statusUpdate', () => { loadRequests(); });
+    loadAnalytics();
+    socket.on('statusUpdate', () => { loadRequests(); loadAnalytics(); });
     return () => { socket.off('statusUpdate'); };
   }, []);
 
@@ -24,6 +28,17 @@ function ExpeditorDashboard() {
       setRequests(res.data.requests);
     } catch (err) {
       console.log('Error loading requests');
+    }
+  };
+
+  const loadAnalytics = async () => {
+    try {
+      const res1 = await API.get('/analytics/popular-references');
+      setPopularRefs(res1.data.popular);
+      const res2 = await API.get('/analytics/top-clients');
+      setTopClients(res2.data.clients);
+    } catch (err) {
+      console.log('Error loading analytics');
     }
   };
 
@@ -68,7 +83,6 @@ function ExpeditorDashboard() {
     setDateTo('');
   };
 
-  // Apply all filters
   const filteredRequests = requests.filter((r) => {
     if (filter !== 'all' && r.status !== filter) return false;
     if (searchClient && !r.client_name.toLowerCase().includes(searchClient.toLowerCase())) return false;
@@ -77,24 +91,27 @@ function ExpeditorDashboard() {
     return true;
   });
 
-  // Analytics
   const totalRequests = requests.length;
   const pendingCount = requests.filter((r) => r.status === 'pending').length;
   const processingCount = requests.filter((r) => r.status === 'processing').length;
   const completedCount = requests.filter((r) => r.status === 'completed').length;
   const cancelledCount = requests.filter((r) => r.status === 'cancelled').length;
 
+  const maxCount = popularRefs.length > 0 ? Math.max(...popularRefs.map(r => parseInt(r.order_count))) : 1;
+
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <h2>Expeditor Dashboard</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn-submit" onClick={() => setShowAnalytics(!showAnalytics)}>
+            {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+          </button>
           <button className="btn-submit" onClick={exportToExcel}>Export Excel</button>
           <button className="btn-logout" onClick={handleLogout}>Logout</button>
         </div>
       </div>
 
-      {/* Analytics Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '15px', marginBottom: '25px' }}>
         <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
           <p style={{ fontSize: '14px', color: '#777' }}>Total</p>
@@ -118,10 +135,67 @@ function ExpeditorDashboard() {
         </div>
       </div>
 
+      {/* Analytics Section */}
+      {showAnalytics && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+          {/* Popular References Chart */}
+          <div style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ marginBottom: '20px', fontSize: '16px', color: '#333' }}>🔥 Most Ordered References</h3>
+            {popularRefs.length === 0 ? (
+              <p style={{ color: '#999', textAlign: 'center' }}>No data yet</p>
+            ) : (
+              popularRefs.map((ref, i) => (
+                <div key={i} style={{ marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: '500', color: '#333' }}>{ref.reference}</span>
+                    <span style={{ color: '#777' }}>{ref.order_count} orders ({ref.percentage}%)</span>
+                  </div>
+                  <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${(parseInt(ref.order_count) / maxCount) * 100}%`,
+                      height: '100%',
+                      background: '#1a73e8',
+                      borderRadius: '4px',
+                      transition: 'width 0.3s'
+                    }}></div>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>{ref.client_name} — {ref.article_code} — Total qty: {ref.total_quantity}</p>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Top Clients Chart */}
+          <div style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ marginBottom: '20px', fontSize: '16px', color: '#333' }}>👥 Top Clients</h3>
+            {topClients.length === 0 ? (
+              <p style={{ color: '#999', textAlign: 'center' }}>No data yet</p>
+            ) : (
+              topClients.map((client, i) => (
+                <div key={i} style={{ marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: '500', color: '#333' }}>{client.client_name}</span>
+                    <span style={{ color: '#777' }}>{client.order_count} orders ({client.percentage}%)</span>
+                  </div>
+                  <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${(parseInt(client.order_count) / Math.max(...topClients.map(c => parseInt(c.order_count)))) * 100}%`,
+                      height: '100%',
+                      background: '#34a853',
+                      borderRadius: '4px',
+                      transition: 'width 0.3s'
+                    }}></div>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>Total quantity: {client.total_quantity}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="table-section">
         <h3>All Requests</h3>
-
-        {/* Filters */}
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
             <label style={{ fontSize: '13px', color: '#555' }}>Status</label>

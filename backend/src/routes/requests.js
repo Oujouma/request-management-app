@@ -104,7 +104,11 @@ router.patch('/:id/status', async (req, res) => {
       [request.created_by, `Your request "${request.client_name}" status changed to ${status}`]
     );
 
-    res.json({ message: 'Status updated successfully' });
+    // Send real-time update to all connected users
+    const io = req.app.get('io');
+    io.emit('statusUpdate', { requestId: id, newStatus: status });
+    io.emit('newNotification', { userId: request.created_by });
+    
   } catch (err) {
     console.log('Update status error:', err.message);
     res.status(500).json({ error: 'Server error' });

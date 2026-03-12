@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import API from '../api/axios';
+
+const socket = io('http://localhost:3000');
 
 function ExpeditorDashboard() {
   const [requests, setRequests] = useState([]);
@@ -8,6 +11,15 @@ function ExpeditorDashboard() {
 
   useEffect(() => {
     loadRequests();
+
+    // Listen for real-time updates
+    socket.on('statusUpdate', () => {
+      loadRequests();
+    });
+
+    return () => {
+      socket.off('statusUpdate');
+    };
   }, []);
 
   const loadRequests = async () => {
@@ -25,16 +37,9 @@ function ExpeditorDashboard() {
         status: newStatus,
         comment: `Status changed to ${newStatus}`
       });
-      loadRequests();
     } catch (err) {
       console.log('Error updating status');
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/';
   };
 
   const exportToExcel = async () => {
@@ -52,6 +57,12 @@ function ExpeditorDashboard() {
     } catch (err) {
       console.log('Export failed');
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
   };
 
   const filteredRequests = filter === 'all'

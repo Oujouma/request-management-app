@@ -33,56 +33,43 @@ function Register() {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
+    <div className="auth-container">
       <h2>Register</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {success && <p style={{ color: 'green' }}>{success}</p>}
+      {error && <p className="error-message">{error}</p>}
+      {success && <p className="success-message">{success}</p>}
 
-      <div style={{ marginBottom: '10px' }}>
+      <div>
         <label>Full Name</label>
         <input
           type="text"
           value={form.full_name}
           onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
         />
-      </div>
-      <div style={{ marginBottom: '10px' }}>
         <label>Email</label>
         <input
           type="email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
         />
-      </div>
-      <div style={{ marginBottom: '10px' }}>
         <label>Password</label>
         <input
           type="password"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
         />
-      </div>
-      <div style={{ marginBottom: '10px' }}>
         <label>Role</label>
         <select
           value={form.role}
           onChange={(e) => setForm({ ...form, role: e.target.value })}
-          style={{ width: '100%', padding: '8px', marginTop: '5px' }}
         >
           <option value="correspondent">Correspondent</option>
           <option value="expeditor">Expeditor</option>
         </select>
+        <button className="btn-primary" onClick={handleRegister}>
+          Register
+        </button>
       </div>
-      <button
-        onClick={handleRegister}
-        style={{ width: '100%', padding: '10px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}
-      >
-        Register
-      </button>
-      <p style={{ marginTop: '15px', textAlign: 'center' }}>
+      <p className="auth-link">
         Already have an account? <Link to="/">Login here</Link>
       </p>
     </div>

@@ -21,6 +21,10 @@ app.use(express.json());
 const authRoutes = require('./routes/auth');
 app.use('/auth', authRoutes);
 
+const requestRoutes = require('./routes/requests');
+app.use('/requests', requestRoutes);
+
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });
 });

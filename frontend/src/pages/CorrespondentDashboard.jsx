@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import API from '../api/axios';
+import ChatModal from '../components/ChatModal';
 
 const socket = io('http://localhost:3000');
 
@@ -14,6 +15,7 @@ function CorrespondentDashboard() {
   const [references, setReferences] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingRequest, setEditingRequest] = useState(null);
+  const [chatRequest, setChatRequest] = useState(null);
   const [form, setForm] = useState({
     client_name: '',
     reference: '',
@@ -351,28 +353,37 @@ function CorrespondentDashboard() {
                 <td>{new Date(req.date).toLocaleDateString()}</td>
                 <td><span className={`status-badge status-${req.status}`}>{req.status}</span></td>
                 <td>
-                  {req.status === 'pending' && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => startEdit(req)}
-                        style={{ padding: '4px 12px', border: '1px solid #1a73e8', borderRadius: '6px', background: 'white', color: '#1a73e8', cursor: 'pointer', fontSize: '12px' }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => cancelRequest(req.id)}
-                        style={{ padding: '4px 12px', border: '1px solid #d93025', borderRadius: '6px', background: 'white', color: '#d93025', cursor: 'pointer', fontSize: '12px' }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setChatRequest(req)}
+                      style={{ padding: '4px 12px', border: '1px solid #1a73e8', borderRadius: '6px', background: 'white', color: '#1a73e8', cursor: 'pointer', fontSize: '12px' }}
+                    >
+                      💬 Chat
+                    </button>
+                    {req.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => startEdit(req)}
+                          style={{ padding: '4px 12px', border: '1px solid #FFA500', borderRadius: '6px', background: 'white', color: '#FFA500', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => cancelRequest(req.id)}
+                          style={{ padding: '4px 12px', border: '1px solid #d93025', borderRadius: '6px', background: 'white', color: '#d93025', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {chatRequest && <ChatModal request={chatRequest} onClose={() => setChatRequest(null)} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import API from '../api/axios';
+import ChatModal from '../components/ChatModal';
 
 const socket = io('http://localhost:3000');
 
@@ -13,6 +14,7 @@ function ExpeditorDashboard() {
   const [popularRefs, setPopularRefs] = useState([]);
   const [topClients, setTopClients] = useState([]);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [chatRequest, setChatRequest] = useState(null);
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
@@ -270,23 +272,32 @@ function ExpeditorDashboard() {
                     {req.status}
                   </span>
                 </td>
-                <td>
-                  <select
-                    value={req.status}
-                    onChange={(e) => updateStatus(req.id, e.target.value)}
-                    className="action-select"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
+               <td>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <select
+                      value={req.status}
+                      onChange={(e) => updateStatus(req.id, e.target.value)}
+                      className="action-select"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                    <button
+                      onClick={() => setChatRequest(req)}
+                      style={{ padding: '4px 12px', border: '1px solid #1a73e8', borderRadius: '6px', background: 'white', color: '#1a73e8', cursor: 'pointer', fontSize: '12px' }}
+                    >
+                      💬
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+   {chatRequest && <ChatModal request={chatRequest} onClose={() => setChatRequest(null)} />}
     </div>
   );
 }

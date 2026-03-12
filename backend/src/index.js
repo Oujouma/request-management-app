@@ -18,6 +18,9 @@ app.use(cors());
 app.use(express.json());
 
 // A simple test route - just to check if the server is running
+const authRoutes = require('./routes/auth');
+app.use('/auth', authRoutes);
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });
 });

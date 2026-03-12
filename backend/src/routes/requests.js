@@ -135,5 +135,98 @@ router.get('/:id/history', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+// EDIT a request (correspondents only, only if pending)
+router.put('/:id', async (req, res) => {
+  try {
+    if (req.user.role !== 'correspondent') {
+      return res.status(403).json({ error: 'Only correspondents can edit requests' });
+    }
+
+    const { id } = req.params;
+
+    // Check if request exists and belongs to this user
+    const current = await pool.query('SELECT * FROM requests WHERE id = $1', [id]);
+
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    if (current.rows[0].created_by !== req.user.id) {
+      return res.status(403).json({ error: 'You can only edit your own requests' });
+    }
+
+    if (current.rows[0].status !== 'pending') {
+      return res.status(400).json({ error: 'Can only edit pending requests' });
+    }
+
+    const { client_name, reference, article_code, quantity, date, notes } = req.body;
+
+    const result = await pool.query(
+      `UPDATE requests SET client_name = $1, reference = $2, article_code = $3,
+       quantity = $4, date = $5, notes = $6, updated_at = NOW()
+       WHERE id = $7 RETURNING *`,
+      [client_name, reference, article_code, quantity, date, notes, id]
+    );
+
+    // Log the edit in history
+    await pool.query(
+      `INSERT INTO request_history (request_id, changed_by, old_status, new_status, comment)
+       VALUES ($1, $2, 'pending', 'pending', 'Request details edited')`,
+      [id, req.user.id]
+    );
+
+    const io = req.app.get('io');
+    io.emit('statusUpdate', { requestId: id });
+
+    res.json({ message: 'Request updated successfully', request: result.rows[0] });
+  } catch (err) {
+    console.log('Edit request error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// CANCEL a request (correspondents only, only if pending)
+router.patch('/:id/cancel', async (req, res) => {
+  try {
+    if (req.user.role !== 'correspondent') {
+      return res.status(403).json({ error: 'Only correspondents can cancel requests' });
+    }
+
+    const { id } = req.params;
+
+    const current = await pool.query('SELECT * FROM requests WHERE id = $1', [id]);
+
+    if (current.rows.length === 0) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    if (current.rows[0].created_by !== req.user.id) {
+      return res.status(403).json({ error: 'You can only cancel your own requests' });
+    }
+
+    if (current.rows[0].status !== 'pending') {
+      return res.status(400).json({ error: 'Can only cancel pending requests' });
+    }
+
+    await pool.query(
+      'UPDATE requests SET status = $1, updated_at = NOW() WHERE id = $2',
+      ['cancelled', id]
+    );
+
+    await pool.query(
+      `INSERT INTO request_history (request_id, changed_by, old_status, new_status, comment)
+       VALUES ($1, $2, 'pending', 'cancelled', 'Cancelled by correspondent')`,
+      [id, req.user.id]
+    );
+
+    const io = req.app.get('io');
+    io.emit('statusUpdate', { requestId: id });
+
+    res.json({ message: 'Request cancelled successfully' });
+  } catch (err) {
+    console.log('Cancel request error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 module.exports = router;

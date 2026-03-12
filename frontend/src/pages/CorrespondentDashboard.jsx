@@ -13,6 +13,7 @@ function CorrespondentDashboard() {
   const [searchClient, setSearchClient] = useState('');
   const [references, setReferences] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [editingRequest, setEditingRequest] = useState(null);
   const [form, setForm] = useState({
     client_name: '',
     reference: '',
@@ -108,13 +109,52 @@ function CorrespondentDashboard() {
       return;
     }
     try {
-      await API.post('/requests', { ...form, quantity: parseInt(form.quantity) });
-      setMessage('Request created successfully!');
+      if (editingRequest) {
+        await API.put(`/requests/${editingRequest.id}`, { ...form, quantity: parseInt(form.quantity) });
+        setMessage('Request updated successfully!');
+        setEditingRequest(null);
+      } else {
+        await API.post('/requests', { ...form, quantity: parseInt(form.quantity) });
+        setMessage('Request created successfully!');
+      }
       setMessageType('success');
       setForm({ client_name: '', reference: '', article_code: '', quantity: '', date: new Date().toISOString().split('T')[0], notes: '' });
       loadRequests();
     } catch (err) {
-      setMessage(err.response?.data?.error || 'Error creating request');
+      setMessage(err.response?.data?.error || 'Error saving request');
+      setMessageType('error');
+    }
+  };
+
+  const startEdit = (req) => {
+    setEditingRequest(req);
+    setForm({
+      client_name: req.client_name,
+      reference: req.reference,
+      article_code: req.article_code,
+      quantity: req.quantity.toString(),
+      date: req.date.split('T')[0],
+      notes: req.notes || ''
+    });
+    setMessage('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingRequest(null);
+    setForm({ client_name: '', reference: '', article_code: '', quantity: '', date: new Date().toISOString().split('T')[0], notes: '' });
+    setMessage('');
+  };
+
+  const cancelRequest = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this request?')) return;
+    try {
+      await API.patch(`/requests/${id}/cancel`);
+      setMessage('Request cancelled successfully');
+      setMessageType('success');
+      loadRequests();
+    } catch (err) {
+      setMessage(err.response?.data?.error || 'Error cancelling request');
       setMessageType('error');
     }
   };
@@ -189,8 +229,14 @@ function CorrespondentDashboard() {
         </div>
       </div>
 
-      <div className="form-section">
-        <h3>Submit New Request</h3>
+      <div className="form-section" style={{ borderLeft: editingRequest ? '4px solid #FFA500' : 'none' }}>
+        <h3>{editingRequest ? '✏️ Editing Request' : 'Submit New Request'}</h3>
+        {editingRequest && (
+          <p style={{ fontSize: '13px', color: '#FFA500', marginBottom: '10px' }}>
+            You are editing request for <strong>{editingRequest.client_name}</strong>.
+            <button onClick={cancelEdit} style={{ marginLeft: '10px', border: 'none', background: 'none', color: '#d93025', cursor: 'pointer', textDecoration: 'underline' }}>Cancel editing</button>
+          </p>
+        )}
         {message && <p className={messageType === 'success' ? 'success-message' : 'error-message'}>{message}</p>}
         <div className="form-grid">
           <div>
@@ -252,7 +298,9 @@ function CorrespondentDashboard() {
             <input type="text" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
         </div>
-        <button className="btn-submit" onClick={handleSubmit}>Submit Request</button>
+        <button className="btn-submit" onClick={handleSubmit}>
+          {editingRequest ? 'Save Changes' : 'Submit Request'}
+        </button>
       </div>
 
       <div className="table-section">
@@ -290,6 +338,7 @@ function CorrespondentDashboard() {
               <th>Qty</th>
               <th>Date</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -301,6 +350,24 @@ function CorrespondentDashboard() {
                 <td>{req.quantity}</td>
                 <td>{new Date(req.date).toLocaleDateString()}</td>
                 <td><span className={`status-badge status-${req.status}`}>{req.status}</span></td>
+                <td>
+                  {req.status === 'pending' && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => startEdit(req)}
+                        style={{ padding: '4px 12px', border: '1px solid #1a73e8', borderRadius: '6px', background: 'white', color: '#1a73e8', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => cancelRequest(req.id)}
+                        style={{ padding: '4px 12px', border: '1px solid #d93025', borderRadius: '6px', background: 'white', color: '#d93025', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

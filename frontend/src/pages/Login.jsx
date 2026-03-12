@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import API from '../api/axios';
 
 function Login() {
@@ -15,11 +15,9 @@ function Login() {
     try {
       const res = await API.post('/auth/login', { email, password });
 
-      // Save the token and user info
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
 
-      // Go to the right dashboard based on role
       if (res.data.user.role === 'correspondent') {
         navigate('/correspondent');
       } else {
@@ -60,6 +58,9 @@ function Login() {
           Login
         </button>
       </div>
+      <p style={{ marginTop: '15px', textAlign: 'center' }}>
+        Don't have an account? <Link to="/register">Register here</Link>
+      </p>
     </div>
   );
 }

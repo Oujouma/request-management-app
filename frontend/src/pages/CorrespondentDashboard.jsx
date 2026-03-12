@@ -32,6 +32,11 @@ function CorrespondentDashboard() {
     e.preventDefault();
     setMessage('');
 
+    if (!form.client_name || !form.reference || !form.article_code || !form.quantity || !form.date) {
+      setMessage('Please fill in all required fields');
+      return;
+    }
+
     try {
       await API.post('/requests', {
         ...form,

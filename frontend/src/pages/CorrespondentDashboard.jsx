@@ -3,6 +3,9 @@ import API from '../api/axios';
 
 function CorrespondentDashboard() {
   const [requests, setRequests] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [form, setForm] = useState({
     client_name: '',
     reference: '',
@@ -17,6 +20,9 @@ function CorrespondentDashboard() {
 
   useEffect(() => {
     loadRequests();
+    loadUnreadCount();
+    const interval = setInterval(loadUnreadCount, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadRequests = async () => {
@@ -25,6 +31,34 @@ function CorrespondentDashboard() {
       setRequests(res.data.requests);
     } catch (err) {
       console.log('Error loading requests');
+    }
+  };
+
+  const loadNotifications = async () => {
+    try {
+      const res = await API.get('/notifications');
+      setNotifications(res.data.notifications);
+    } catch (err) {
+      console.log('Error loading notifications');
+    }
+  };
+
+  const loadUnreadCount = async () => {
+    try {
+      const res = await API.get('/notifications/unread-count');
+      setUnreadCount(res.data.count);
+    } catch (err) {
+      console.log('Error loading count');
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await API.patch('/notifications/read-all');
+      setUnreadCount(0);
+      loadNotifications();
+    } catch (err) {
+      console.log('Error marking read');
     }
   };
 
@@ -63,7 +97,48 @@ function CorrespondentDashboard() {
     <div className="dashboard">
       <div className="dashboard-header">
         <h2>Welcome, {user?.full_name}</h2>
-        <button className="btn-logout" onClick={handleLogout}>Logout</button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="btn-logout"
+              onClick={() => { setShowNotifications(!showNotifications); loadNotifications(); }}
+            >
+              🔔 {unreadCount > 0 && <span style={{ color: 'red', fontWeight: 'bold' }}>({unreadCount})</span>}
+            </button>
+            {showNotifications && (
+              <div style={{
+                position: 'absolute', right: 0, top: '45px', width: '350px',
+                background: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                zIndex: 100, maxHeight: '400px', overflow: 'auto'
+              }}>
+                <div style={{ padding: '15px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
+                  <strong>Notifications</strong>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllRead} style={{ border: 'none', background: 'none', color: '#1a73e8', cursor: 'pointer' }}>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <p style={{ padding: '20px', textAlign: 'center', color: '#999' }}>No notifications</p>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} style={{
+                      padding: '12px 15px', borderBottom: '1px solid #f0f0f0',
+                      background: n.is_read ? 'white' : '#f0f7ff'
+                    }}>
+                      <p style={{ fontSize: '14px' }}>{n.message}</p>
+                      <p style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
+                        {new Date(n.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          <button className="btn-logout" onClick={handleLogout}>Logout</button>
+        </div>
       </div>
 
       <div className="form-section">

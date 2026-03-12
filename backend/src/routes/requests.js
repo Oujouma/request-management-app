@@ -97,6 +97,13 @@ router.patch('/:id/status', async (req, res) => {
       [id, req.user.id, oldStatus, status, comment]
     );
 
+    // Notify the correspondent who created the request
+    const request = current.rows[0];
+    await pool.query(
+      'INSERT INTO notifications (user_id, message) VALUES ($1, $2)',
+      [request.created_by, `Your request "${request.client_name}" status changed to ${status}`]
+    );
+
     res.json({ message: 'Status updated successfully' });
   } catch (err) {
     console.log('Update status error:', err.message);

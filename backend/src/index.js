@@ -24,6 +24,12 @@ app.use('/auth', authRoutes);
 const requestRoutes = require('./routes/requests');
 app.use('/requests', requestRoutes);
 
+const exportRoutes = require('./routes/export');
+app.use('/export', exportRoutes);
+
+const notificationRoutes = require('./routes/notifications');
+app.use('/notifications', notificationRoutes);
+
 
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });

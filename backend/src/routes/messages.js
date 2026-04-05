@@ -55,38 +55,35 @@ router.post('/:requestId', async (req, res) => {
     const io = req.app.get('io');
     io.emit('newMessage', { requestId, message: fullMessage });
 
-    // Notify the other person
+    // Get the request to find who to notify
     const request = await pool.query('SELECT * FROM requests WHERE id = $1', [requestId]);
-    const notifyUserId = req.user.role === 'correspondent'
-      ? null  // We'll notify all expeditors later
-      : request.rows[0].created_by;
 
-    if (notifyUserId) {
-      await pool.query(
-        'INSERT INTO notifications (user_id, message) VALUES ($1, $2)',
-        [notifyUserId, `New message on order "${request.rows[0].client_name}"`]
-      );
-      io.emit('newNotification', { userId: notifyUserId });
+    if (request.rows.length > 0) {
+      const requestData = request.rows[0];
+
+      if (req.user.role === 'correspondent') {
+        // Correspondent sent message -> notify ALL expeditors
+        const expeditors = await pool.query("SELECT id FROM users WHERE role = 'expeditor'");
+        for (const exp of expeditors.rows) {
+          await pool.query(
+            'INSERT INTO notifications (user_id, message) VALUES ($1, $2)',
+            [exp.id, `New message from ${sender.rows[0].full_name} on order "${requestData.client_name}"`]
+          );
+          io.emit('newNotification', { userId: exp.id });
+        }
+      } else {
+        // Expeditor sent message -> notify the correspondent who created the request
+        await pool.query(
+          'INSERT INTO notifications (user_id, message) VALUES ($1, $2)',
+          [requestData.created_by, `New message from ${sender.rows[0].full_name} on order "${requestData.client_name}"`]
+        );
+        io.emit('newNotification', { userId: requestData.created_by });
+      }
     }
 
     res.status(201).json({ message: fullMessage });
   } catch (err) {
     console.log('Send message error:', err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// GET unread message count per request
-router.get('/unread/:requestId', async (req, res) => {
-  try {
-    const { requestId } = req.params;
-    const result = await pool.query(
-      'SELECT COUNT(*) FROM messages WHERE request_id = $1',
-      [requestId]
-    );
-    res.json({ count: parseInt(result.rows[0].count) });
-  } catch (err) {
-    console.log('Count error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });

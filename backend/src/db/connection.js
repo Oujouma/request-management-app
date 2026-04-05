@@ -1,14 +1,10 @@
 const { Pool } = require('pg');
-const dotenv = require('dotenv');
 
-dotenv.config();
-
-// Create a connection to the database
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Test the connection between the two versions 
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.log('Database connection FAILED:', err.message);

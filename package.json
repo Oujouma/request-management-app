@@ -2,7 +2,8 @@
   "name": "request-management-app",
   "version": "1.0.0",
   "scripts": {
-    "start": "cd backend && node src/index.js"
+    "build": "cd backend && npm install",
+    "start": "node backend/src/index.js"
   },
   "engines": {
     "node": "22.x"

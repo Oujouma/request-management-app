@@ -1,7 +1,6 @@
 FROM node:22-slim
 WORKDIR /app
-COPY backend/package*.json ./
-RUN npm install
 COPY backend/ ./
+RUN npm install
 EXPOSE 3000
 CMD ["node", "src/index.js"]

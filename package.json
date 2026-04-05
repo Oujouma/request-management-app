@@ -1,6 +1,11 @@
 {
-  "dependencies": {
-    "axios": "^1.13.6",
-    "react-router-dom": "^7.13.1"
+  "name": "request-management-app",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd backend && node src/index.js",
+    "install-backend": "cd backend && npm install"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
